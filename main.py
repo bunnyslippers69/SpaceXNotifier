@@ -7,21 +7,22 @@ discordWebhookUrl = ""
 tweepyKeys = []
 
 with open("config/discordWebhook.conf") as f:
-    discordWebhookUrl = f.read()
+    discordWebhookUrl = f.read().strip()
 
 with open("config/tweepyKeys.conf") as f:
     content = f.readlines()
     content = [x.strip() for x in content] 
     tweepyKeys = content
 
-#Import modules'
+#Import modules
 rc = importlib.import_module("roadClosures")
 tn = importlib.import_module("tweetTracker")
 tfr = importlib.import_module("tfrTracker")
 sn = importlib.import_module("siteChanges")
 
+
 #Time to sleep between actions
-sleep = 15
+sleep = 35
 
 closureNotifier = rc.ClosureNotifier(discordWebhookUrl)
 tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)
@@ -31,12 +32,14 @@ siteNotifier = sn.SiteNotifier("https://www.spacex.com/vehicles/starship/", disc
 
 #Road Closures - https://reqbin.com/kroamhug
 #Tweet Notification - https://reqbin.com/ydkyw5k2
-
 while True:
-    print("\n" + str(time.ctime()))
-    closureNotifier.run()
-    tweetNotifier.run()
-    tfrNotifier.run()
-    siteNotifier.run()
-    print("--End Cycle--")
-    time.sleep(sleep)
+    try:
+        print("\n" + str(time.ctime()))
+        closureNotifier.run()
+        tweetNotifier.run()
+        tfrNotifier.run()
+        siteNotifier.run()
+        print("--End Cycle--")
+        time.sleep(sleep)
+    except:
+        print("An exception occurred. Skipping")
