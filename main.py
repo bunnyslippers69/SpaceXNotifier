@@ -18,6 +18,7 @@ with open("config/tweepyKeys.conf") as f:
 rc = importlib.import_module("roadClosures")
 tn = importlib.import_module("tweetTracker")
 tfr = importlib.import_module("tfrTracker")
+sn = importlib.import_module("siteChanges")
 
 #Time to sleep between actions
 sleep = 15
@@ -25,6 +26,8 @@ sleep = 15
 closureNotifier = rc.ClosureNotifier(discordWebhookUrl)
 tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)
 tfrNotifier = tfr.TfrNotifier(discordWebhookUrl)
+siteNotifier = sn.SiteNotifier("https://www.spacex.com/vehicles/starship/", discordWebhookUrl)
+
 
 #Road Closures - https://reqbin.com/kroamhug
 #Tweet Notification - https://reqbin.com/ydkyw5k2
@@ -34,5 +37,6 @@ while True:
     closureNotifier.run()
     tweetNotifier.run()
     tfrNotifier.run()
+    siteNotifier.run()
     print("--End Cycle--")
     time.sleep(sleep)
