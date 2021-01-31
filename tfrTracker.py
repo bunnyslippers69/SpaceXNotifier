@@ -105,26 +105,21 @@ class TfrNotifier:
             })
 
     def run(self):
-        print("--TFRs--")
-        print("Started...")
+        print("--TFRs Start--")
         #Obtains the TFR page content for use in the BeautifulSoup instance
-        print("Grabbing page...")
+
         pageContent = self.getPageContent()
         soup = BeautifulSoup(pageContent, 'html.parser')
 
         #Obtains unparsed TFRs
         tfrs = self.getCurrentTfrs(soup)
 
-        print("Parsing TFRs...")
         #Parses the TFRs inside the 'tfrs' list
         parsedTfrs = self.parseTfrs(tfrs)
 
-        print("Finding differences...")
         different = self.getDifference(parsedTfrs)
 
         if different:
-            print("Difference found!")
             self.notifyDiscord(self.discordWebhookUrl)
-        else:
-            print("No differences!")
-        print("Done.\n")
+
+        print("--TFRs Done--")

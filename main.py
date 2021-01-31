@@ -2,6 +2,7 @@ import importlib
 import threading
 import time
 import requests
+from concurrent.futures import ThreadPoolExecutor
 
 discordWebhookUrl = ""
 tweepyKeys = []
@@ -20,7 +21,6 @@ tn = importlib.import_module("tweetTracker")
 tfr = importlib.import_module("tfrTracker")
 sn = importlib.import_module("siteChanges")
 
-
 #Time to sleep between actions
 sleep = 35
 
@@ -29,16 +29,25 @@ tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)
 tfrNotifier = tfr.TfrNotifier(discordWebhookUrl)
 siteNotifier = sn.SiteNotifier("https://www.spacex.com/vehicles/starship/", discordWebhookUrl)
 
+def run_io_tasks_in_parallel(tasks):
+    with ThreadPoolExecutor() as executor:
+        running_tasks = [executor.submit(task) for task in tasks]
+        for running_task in running_tasks:
+            running_task.result()
 
 #Road Closures - https://reqbin.com/kroamhug
 #Tweet Notification - https://reqbin.com/ydkyw5k2
 while True:
     try:
         print("\n" + str(time.ctime()))
-        closureNotifier.run()
-        tweetNotifier.run()
-        tfrNotifier.run()
-        siteNotifier.run()
+
+        run_io_tasks_in_parallel([
+            lambda: closureNotifier.run(),
+            lambda: tweetNotifier.run(),
+            lambda: tfrNotifier.run(),
+            lambda: siteNotifier.run()
+        ])
+
         print("--End Cycle--")
         time.sleep(sleep)
     except:

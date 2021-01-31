@@ -24,19 +24,14 @@ class TweetNotifier:
     lastTweet = None
 
     def run(self):
-        print("--Tweet Tracker--")
+        print("--Tweet Tracker Start--")
         
-        print("Grabbing Last Tweet...")
         for tweet in self.api.user_timeline(screen_name = "elonmusk", count = 1):
             if not self.lastTweet:
-                print("Last Tweet loaded.")
                 self.lastTweet = tweet
             elif self.lastTweet.id != tweet.id:
-                print("Current Tweet differs from previous Tweet.")
                 self.lastTweet = tweet
                 self.notifyDiscord(self.discordWebhookUrl, tweet)
-            else:
-                print("Last Tweet Identical")
-            print(tweet.id)
+
         #time.sleep(30)
-        print("Done.\n")
+        print("--Tweet Tracker Done--")

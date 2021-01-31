@@ -44,15 +44,10 @@ class SiteNotifier():
             })
 
     def run(self):
-        print("--Site Notifier--")
-        print("Grabbing page...")
+        print("--Site Notifier Start--")
         different = self.getDifference(self.getPage())
-        print("Comparing pages...")
 
         if different:
-            print("Difference detected...")
             self.notifyDiscord(self.webhookUrl)
-        else:
-            print("No differences detected...")
         
-        print("Done.")
+        print("--Site Notifier Done--")

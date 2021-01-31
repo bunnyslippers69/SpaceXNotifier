@@ -101,19 +101,17 @@ class ClosureNotifier:
     prevClosures = []
 
     def run(self):
-        print("--Road Closures--")
-        print("Started...")
+        print("--Road Closures Start--")
+
         #prevClosures = []
 
         info = self.getInfo()
         differences = []
 
-        print("Finding Differences...")
         if not self.prevClosures:
             self.prevClosures = info
 
             #Saves the current page to the web archive
-            print("Saving page to web archive...")
             self.saveToArchive()
         else:
             if len(self.prevClosures) >= len(info):
@@ -123,19 +121,14 @@ class ClosureNotifier:
 
         
         if len(differences) > 0:
-            for diff in differences:
-                print(diff)
             requests.post("https://maker.ifttt.com/trigger/road_closures_changed/with/key/daL1yvnd0s3Uu3pXaCOXA36JaSFzJtxJ57Nb3lr_TY", json={"value1": int(len(differences)/2)} )
 
             if self.discordWebhookUrl != None:
                 self.notifyDiscord(self.discordWebhookUrl, differences, self.prevClosures, info)
             
             #Saves the current page to the web archive
-            print("Saving page to web archive...")
             self.saveToArchive()
-        else:
-            print("No Differences Found.")
 
         self.prevClosures = info
-        print("Done.\n")
+        print("--Road Closures Done--")
         #time.sleep(30)
