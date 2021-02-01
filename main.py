@@ -22,7 +22,7 @@ tfr = importlib.import_module("tfrTracker")
 sn = importlib.import_module("siteChanges")
 
 #Time to sleep between actions
-sleep = 35
+sleep = 10
 
 closureNotifier = rc.ClosureNotifier(discordWebhookUrl)
 tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)
@@ -50,5 +50,7 @@ while True:
 
         print("--End Cycle--")
         time.sleep(sleep)
-    except:
-        print("An exception occurred. Skipping")
+    except Exception as e:
+        print("An exception occurred. Skipping. ")
+        print(e)
+        time.sleep(sleep)

@@ -3,9 +3,10 @@ import requests
 import time
 
 class Tfr:
-    def __init__(self, date, url):
+    def __init__(self, date, url, tfrId):
         self.date = date
         self.url = url
+        self.id = tfrId
 
 class TfrNotifier:
     tfrUrl = "https://tfr.faa.gov/tfr2/list.jsp?type=SPACE+OPERATIONS"
@@ -59,31 +60,53 @@ class TfrNotifier:
             #Grabs the date and url from the unparsed tfr
             date = cols[0]
             url = "https://tfr.faa.gov" + aTag['href'][2:]
+            tfrId = cols[1].text.strip()
 
             #Adds a new Tfr object to the 'parsedTfrs' list
-            parsedTfrs.append(Tfr(date, url))
+            parsedTfrs.append(Tfr(date, url, tfrId))
         
         #Returns the parsed list
         return parsedTfrs
     
     prevTfrs = []
 
-    def getDifference(self, currentTfrs):
+    def getDifferences(self, currentTfrs):
+        differences = []
+
         if not self.prevTfrs:
             self.prevTfrs = currentTfrs
+            self.prevTfrs.append(Tfr("rape", "me", "please"))
         else:
+            #Checks if there are any differing TFRs
+            difference = False
             if len(self.prevTfrs) != len(currentTfrs):
-                self.prevTfrs = currentTfrs
-                return True
+                difference = True
             else:
                 for i in range(0, len(currentTfrs)):
                     if currentTfrs[i].url != self.prevTfrs[i].url:
-                        self.prevTfrs = currentTfrs
-                        return True
-        self.prevTfrs = currentTfrs
-        return False
+                        difference = True
+            
+            #If there are differing TFRs, add them all to a list
+            if difference:
+                differences.append(self.prevTfrs)
+                differences.append(currentTfrs)
 
-    def notifyDiscord(self, webhookUrl):
+                self.prevTfrs = currentTfrs
+                return differences
+
+        self.prevTfrs = currentTfrs
+        return differences
+
+    def notifyDiscord(self, webhookUrl, differences):
+        
+        print(len(differences))
+        prevTfrs = ""
+        for diff in differences[0]:
+            prevTfrs = prevTfrs + "["+ diff.id + "](" + diff.url + ")\n"
+
+        currTfrs = ""
+        for diff in differences[1]:
+            currTfrs = currTfrs + "["+ diff.id + "](" + diff.url + ")\n"
 
         requests.post(webhookUrl, json=
             {
@@ -92,6 +115,18 @@ class TfrNotifier:
                     {
                     "title": "TFR Update",
                     "description": "There has been a change to the SpaceX TFR notices.",
+                    "fields": [
+                            {
+                            "name": "Previous",
+                            "value": prevTfrs,
+                            "inline": True
+                            },
+                            {
+                            "name": "Current",
+                            "value": currTfrs,
+                            "inline": True
+                            }
+                        ],
                     "url": "https://tfr.faa.gov/tfr2/list.jsp?type=SPACE+OPERATIONS",
                     "color": 5814783,
                     "author": {
@@ -117,9 +152,9 @@ class TfrNotifier:
         #Parses the TFRs inside the 'tfrs' list
         parsedTfrs = self.parseTfrs(tfrs)
 
-        different = self.getDifference(parsedTfrs)
+        differences = self.getDifferences(parsedTfrs)
 
-        if different:
-            self.notifyDiscord(self.discordWebhookUrl)
+        if len(differences) > 0:
+            self.notifyDiscord(self.discordWebhookUrl, differences)
 
         print("--TFRs Done--")
