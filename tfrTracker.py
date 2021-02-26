@@ -1,160 +1,134 @@
 from bs4 import BeautifulSoup
 import requests
 import time
-
-class Tfr:
-    def __init__(self, date, url, tfrId):
-        self.date = date
-        self.url = url
-        self.id = tfrId
+import json
+import jsondiff as jsondiff
+import re
 
 class TfrNotifier:
-    tfrUrl = "https://tfr.faa.gov/tfr2/list.jsp?type=SPACE+OPERATIONS"
+    url = "https://api.bunnyslippers.dev/tfrs/detailed/"
 
     def __init__(self, webhookUrl):
         self.discordWebhookUrl = webhookUrl
 
-    def getPageContent(self):
-        req = requests.get(self.tfrUrl)
-        return req.content
+    def getTfrJson(self):
+        req = requests.get(self.url)
 
-    def getTfrTable(self, soup):
-        table = soup.findChildren("table")[4]
-        return table
-
-    def getTfrRows(self, soup):
-        tfrTable = self.getTfrTable(soup)
-
-        tableRows = tfrTable.findChildren("tr")
-        tfrs = []
-
-        for i in range(4, len(tableRows) - 3):
-            tfrs.append(tableRows[i])
-
-        return tfrs
-
-    def getCurrentTfrs(self, soup):
-        tfrRows = self.getTfrRows(soup)
-        spacexTfrs = []
-
-        for row in tfrRows:
-            cols = row.findChildren("td")
-
-            facility = cols[2]
-            if facility.find("a").text == "ZHU":
-                spacexTfrs.append(row)
-
-        return spacexTfrs
-
-    def parseTfrs(self, tfrs):
-        #List to store parsed objects
-        parsedTfrs = []
-
-        #Iterate over all unparsed TFRs
-        for tfr in tfrs:
-            #Split into columns
-            cols = tfr.findChildren("td")
-            #Tag that contains the url to the TFR
-            aTag = cols[0].find_all('a', href=True)[0]
-
-            #Grabs the date and url from the unparsed tfr
-            date = cols[0]
-            url = "https://tfr.faa.gov" + aTag['href'][2:]
-            tfrId = cols[1].text.strip()
-
-            #Adds a new Tfr object to the 'parsedTfrs' list
-            parsedTfrs.append(Tfr(date, url, tfrId))
-        
-        #Returns the parsed list
-        return parsedTfrs
+        return json.loads(req.content)
     
-    prevTfrs = []
+    def notifyDiscord(self, webhookUrl, parsedDifferences):
+        chgList = parsedDifferences[0]
+        delList = parsedDifferences[1]
+        insList = parsedDifferences[2]
 
-    def getDifferences(self, currentTfrs):
-        differences = []
+        numOfDifferences = len(chgList) + len(delList) + len(insList)
 
-        if not self.prevTfrs:
-            self.prevTfrs = currentTfrs
-            self.prevTfrs.append(Tfr("rape", "me", "please"))
+        desc = "There " + ("has" if numOfDifferences == 1 else "have") + " been " + str(numOfDifferences) + " TFR " + ("change" if numOfDifferences == 1 else "changes")
+
+        changes = ""
+        if len(chgList) < 1:
+            changes = "No closures were removed."
         else:
-            #Checks if there are any differing TFRs
-            difference = False
-            if len(self.prevTfrs) != len(currentTfrs):
-                difference = True
-            else:
-                for i in range(0, len(currentTfrs)):
-                    if currentTfrs[i].url != self.prevTfrs[i].url:
-                        difference = True
-            
-            #If there are differing TFRs, add them all to a list
-            if difference:
-                differences.append(self.prevTfrs)
-                differences.append(currentTfrs)
+            for change in chgList:
+                chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
+                changes = changes + chgString
 
-                self.prevTfrs = currentTfrs
-                return differences
+        deletes = ""
+        if len(delList) < 1:
+            deletes = "No closures were removed."
+        else:
+            for change in delList:
+                chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
+                deletes = deletes + chgString
 
-        self.prevTfrs = currentTfrs
-        return differences
-
-    def notifyDiscord(self, webhookUrl, differences):
-        
-        print(len(differences))
-        prevTfrs = ""
-        for diff in differences[0]:
-            prevTfrs = prevTfrs + "["+ diff.id + "](" + diff.url + ")\n"
-
-        currTfrs = ""
-        for diff in differences[1]:
-            currTfrs = currTfrs + "["+ diff.id + "](" + diff.url + ")\n"
+        inserts = ""
+        if len(insList) < 1:
+            inserts = "No closures were removed."
+        else:
+            for change in insList:
+                chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
+                inserts = inserts + chgString
 
         requests.post(webhookUrl, json=
             {
                 "content": None,
                 "embeds": [
                     {
-                    "title": "TFR Update",
-                    "description": "There has been a change to the SpaceX TFR notices.",
-                    "fields": [
+                        "title": "TFR Update",
+                        "description": desc,
+                        "url": "https://cameroncounty.us/spacex",
+                        "color": 65525,
+                        "fields": [
                             {
-                            "name": "Previous",
-                            "value": prevTfrs,
+                            "name": "Edited",
+                            "value": changes,
                             "inline": True
                             },
                             {
-                            "name": "Current",
-                            "value": currTfrs,
+                            "name": "Removed",
+                            "value": deletes,
+                            "inline": True
+                            },
+                            {
+                            "name": "Added",
+                            "value": inserts,
                             "inline": True
                             }
                         ],
-                    "url": "https://tfr.faa.gov/tfr2/list.jsp?type=SPACE+OPERATIONS",
-                    "color": 5814783,
-                    "author": {
-                        "name": "FAA",
-                        "icon_url": "https://i.bunnyslippers.dev/5fe47ebl.png"
-                    }
+                        "author": {
+                            "name": "FAA",
+                            "icon_url": "https://cdn.discordapp.com/avatars/800817161495904277/575c9555b6d1884d7bbbb3f521a1f859.webp"
+                        }
                     }
                 ],
                 "username": "TFR Update",
-                "avatar_url": "https://i.bunnyslippers.dev/5fe47ebl.png"
+                "avatar_url": "https://cdn.discordapp.com/avatars/800817161495904277/575c9555b6d1884d7bbbb3f521a1f859.webp"
             })
+
+    prevTfrs = []
+
+    def getAltitude(self, traditionalMessage):
+        result = re.search("(POINT OF ORIGIN )(.*)(?= TO PROVIDE)", traditionalMessage.replace("\n", " "))
+        return result[2]
+
+    def extractDifferences(self, currJson):
+        return jsondiff.diff(self.prevTfrs, currJson)
+
+    def parseDifferences(self, differences):
+        if len(differences) < 1:
+            return None
+        else:
+            changed = differences.keys()
+            deleted = differences.get(jsondiff.delete)
+            inserted = differences.get(jsondiff.insert)
+
+            chgList = []
+            delList = []
+            insList = []
+
+            for key in changed:
+                if isinstance(key, int):
+                    chgList.append(self.prevTfrs[key])
+
+            if deleted:
+                for delete in deleted:
+                    delList.append(self.prevTfrs[delete])
+
+            if inserted:
+                for insert in inserted:
+                    insList.append(insert[1])
+
+            return [chgList, delList, insList]
 
     def run(self):
         print("--TFRs Start--")
-        #Obtains the TFR page content for use in the BeautifulSoup instance
+        tfrJson = self.getTfrJson()
 
-        pageContent = self.getPageContent()
-        soup = BeautifulSoup(pageContent, 'html.parser')
+        if not self.prevTfrs:
+            self.prevTfrs = tfrJson
+        else:
+            differences = self.extractDifferences(tfrJson)
+            parsedDifferences = self.parseDifferences(differences)
 
-        #Obtains unparsed TFRs
-        tfrs = self.getCurrentTfrs(soup)
-
-        #Parses the TFRs inside the 'tfrs' list
-        parsedTfrs = self.parseTfrs(tfrs)
-
-        differences = self.getDifferences(parsedTfrs)
-
-        if len(differences) > 0:
-            self.notifyDiscord(self.discordWebhookUrl, differences)
-
-        print("--TFRs Done--")
+            if parsedDifferences:
+                self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)

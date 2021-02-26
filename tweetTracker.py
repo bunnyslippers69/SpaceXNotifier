@@ -26,7 +26,7 @@ class TweetNotifier:
     def run(self):
         print("--Tweet Tracker Start--")
         
-        for tweet in self.api.user_timeline(screen_name = "elonmusk", count = 1):
+        for tweet in self.api.list_timeline(list_id = "1360995960860590081", count = 1, include_rts=False):
             if not self.lastTweet:
                 self.lastTweet = tweet
             elif self.lastTweet.id != tweet.id:

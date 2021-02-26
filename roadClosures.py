@@ -1,54 +1,64 @@
 from bs4 import BeautifulSoup
 import requests
 import time
+import json
+import jsondiff as jsondiff
 
 class ClosureNotifier:
-    url = "https://www.cameroncounty.us/spacex"
+    url = "https://api.bunnyslippers.dev/closures"
 
     def __init__(self, webhookUrl):
         self.discordWebhookUrl = webhookUrl
 
-    def getPageContent(self):
+    def getClosureJson(self):
         req = requests.get(self.url)
 
-        return req.content
-
-    def extractTable(self, soup):
-        return soup.find("div", {"class": "gem-table"})
-
-    def extractRows(self, table, soup):
-        return soup.find_all("td")
-
-    def getInfo(self):
-        page = self.getPageContent()
-
-        soup = BeautifulSoup(page, 'html.parser')
-
-        table = self.extractTable(soup)
-        rows = self.extractRows(table, soup)
-
-        info = []
-        for i in range(int(len(rows) / 4)):
-            baseIndex = i * 4
-            info.append(rows[baseIndex].text + ": " + rows[baseIndex + 1].text + " " + rows[baseIndex + 2].text + " " + rows[baseIndex + 3].text)
-
-        return info
+        return json.loads(req.content)
     
-    def notifyDiscord(self, webhookUrl, differences, previous, current):
-        numOfDifferences = int(len(differences) / 2)
+    def notifyDiscord(self, webhookUrl, parsedDifferences):
+        chgList = parsedDifferences[0]
+        delList = parsedDifferences[1]
+        insList = parsedDifferences[2]
+
+        numOfDifferences = len(chgList) + len(delList) + len(insList)
+
         desc = "There " + ("has" if numOfDifferences == 1 else "have") + " been " + str(numOfDifferences) + " road closure " + ("change" if numOfDifferences == 1 else "changes")
 
-        prevContent = ""
-        for closure in previous:
-            prevContent = prevContent + closure + "\n\n"
+        # prevContent = ""
+        # for closure in previous:
+        #     prevContent = prevContent + closure + "\n\n"
 
-        currContent = ""
-        for closure in current:
-                currContent = currContent + closure + "\n\n"
+        # currContent = ""
+        # for closure in current:
+        #         currContent = currContent + closure + "\n\n"
 
-        diff = ""
-        for difference in differences:
-            diff = diff + difference + "\n\n"
+        # diff = ""
+        # for difference in differences:
+        #     diff = diff + difference + "\n\n"
+
+        changes = ""
+        if len(chgList) < 1:
+            changes = "No closures were removed."
+        else:
+            for change in chgList:
+                chgString = change["type"] + ": " + change["date"] + ", " + change["time"] + " " + change["status"] + "\n\n"
+                changes = changes + chgString
+
+        deletes = ""
+        if len(delList) < 1:
+            deletes = "No closures were removed."
+        else:
+            for change in delList:
+                chgString = change["type"] + ": " + change["date"] + ", " + change["time"] + " " + change["status"] + "\n\n"
+                deletes = deletes + chgString
+
+        inserts = ""
+        if len(insList) < 1:
+            inserts = "No closures were removed."
+        else:
+            for change in insList:
+                chgString = change["type"] + ": " + change["date"] + ", " + change["time"] + " " + change["status"] + "\n\n"
+                inserts = inserts + chgString
 
         requests.post(webhookUrl, json=
             {
@@ -61,18 +71,18 @@ class ClosureNotifier:
                         "color": 65525,
                         "fields": [
                             {
-                            "name": "Previous",
-                            "value": prevContent,
+                            "name": "Edited",
+                            "value": changes,
                             "inline": True
                             },
                             {
-                            "name": "Current",
-                            "value": currContent,
+                            "name": "Removed",
+                            "value": deletes,
                             "inline": True
                             },
                             {
-                            "name": "Differences",
-                            "value": diff,
+                            "name": "Added",
+                            "value": inserts,
                             "inline": True
                             }
                         ],
@@ -100,35 +110,44 @@ class ClosureNotifier:
 
     prevClosures = []
 
+    def extractDifferences(self, currJson):
+        return jsondiff.diff(self.prevClosures, currJson)
+
+    def parseDifferences(self, differences):
+        if len(differences) < 1:
+            return None
+        else:
+            changed = differences.keys()
+            deleted = differences.get(jsondiff.delete)
+            inserted = differences.get(jsondiff.insert)
+
+            chgList = []
+            delList = []
+            insList = []
+
+            for key in changed:
+                if isinstance(key, int):
+                    chgList.append(self.prevClosures[key])
+
+            if deleted:
+                for delete in deleted:
+                    delList.append(self.prevClosures[delete])
+
+            if inserted:
+                for insert in inserted:
+                    insList.append(insert[1])
+
+            return [chgList, delList, insList]
+
     def run(self):
         print("--Road Closures Start--")
-
-        #prevClosures = []
-
-        info = self.getInfo()
-        differences = []
+        closureJson = self.getClosureJson()
 
         if not self.prevClosures:
-            self.prevClosures = info
-
-            #Saves the current page to the web archive
-            self.saveToArchive()
+            self.prevClosures = closureJson
         else:
-            if len(self.prevClosures) >= len(info):
-                differences = list(set(self.prevClosures) ^ set(info))
-            elif len(info) > len(self.prevClosures):
-                differences = list(set(info) ^ set(self.prevClosures))
+            differences = self.extractDifferences(closureJson)
+            parsedDifferences = self.parseDifferences(differences)
 
-        
-        if len(differences) > 0:
-            requests.post("https://maker.ifttt.com/trigger/road_closures_changed/with/key/daL1yvnd0s3Uu3pXaCOXA36JaSFzJtxJ57Nb3lr_TY", json={"value1": int(len(differences)/2)} )
-
-            if self.discordWebhookUrl != None:
-                self.notifyDiscord(self.discordWebhookUrl, differences, self.prevClosures, info)
-            
-            #Saves the current page to the web archive
-            self.saveToArchive()
-
-        self.prevClosures = info
-        print("--Road Closures Done--")
-        #time.sleep(30)
+            if parsedDifferences:
+                self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
