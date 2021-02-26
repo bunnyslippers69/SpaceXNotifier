@@ -113,7 +113,7 @@ class ClosureNotifier:
     def extractDifferences(self, currJson):
         return jsondiff.diff(self.prevClosures, currJson)
 
-    def parseDifferences(self, differences):
+    def parseDifferences(self, differences, closureJson):
         if len(differences) < 1:
             return None
         else:
@@ -127,7 +127,7 @@ class ClosureNotifier:
 
             for key in changed:
                 if isinstance(key, int):
-                    chgList.append(self.prevClosures[key])
+                    chgList.append(closureJson[key])
 
             if deleted:
                 for delete in deleted:
@@ -146,8 +146,11 @@ class ClosureNotifier:
         if not self.prevClosures:
             self.prevClosures = closureJson
         else:
-            differences = self.extractDifferences(closureJson)
-            parsedDifferences = self.parseDifferences(differences)
+            if self.prevClosures != closureJson:
+                differences = self.extractDifferences(closureJson)
+                parsedDifferences = self.parseDifferences(differences, closureJson)
 
-            if parsedDifferences:
-                self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
+                if parsedDifferences:
+                    self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
+                    self.prevClosures = closureJson
+                    print(parsedDifferences)

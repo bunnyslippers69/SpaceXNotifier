@@ -22,7 +22,7 @@ tfr = importlib.import_module("tfrTracker")
 sn = importlib.import_module("siteChanges")
 
 #Time to sleep between actions
-sleep = 35
+sleep = 10
 
 closureNotifier = rc.ClosureNotifier(discordWebhookUrl)
 tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)

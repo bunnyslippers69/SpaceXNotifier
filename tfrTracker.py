@@ -56,7 +56,7 @@ class TfrNotifier:
                     {
                         "title": "TFR Update",
                         "description": desc,
-                        "url": "https://cameroncounty.us/spacex",
+                        "url": "https://tfr.faa.gov/",
                         "color": 65525,
                         "fields": [
                             {
@@ -94,7 +94,7 @@ class TfrNotifier:
     def extractDifferences(self, currJson):
         return jsondiff.diff(self.prevTfrs, currJson)
 
-    def parseDifferences(self, differences):
+    def parseDifferences(self, differences, tfrJson):
         if len(differences) < 1:
             return None
         else:
@@ -108,7 +108,7 @@ class TfrNotifier:
 
             for key in changed:
                 if isinstance(key, int):
-                    chgList.append(self.prevTfrs[key])
+                    chgList.append(tfrJson[key])
 
             if deleted:
                 for delete in deleted:
@@ -127,8 +127,10 @@ class TfrNotifier:
         if not self.prevTfrs:
             self.prevTfrs = tfrJson
         else:
-            differences = self.extractDifferences(tfrJson)
-            parsedDifferences = self.parseDifferences(differences)
+            if self.prevTfrs != tfrJson:
+                differences = self.extractDifferences(tfrJson)
+                parsedDifferences = self.parseDifferences(differences, tfrJson)
 
-            if parsedDifferences:
-                self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
+                if parsedDifferences:
+                    self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
+                    self.prevTfrs = tfrJson
