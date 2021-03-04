@@ -38,7 +38,7 @@ class ClosureNotifier:
 
         changes = ""
         if len(chgList) < 1:
-            changes = "No closures were removed."
+            changes = "No closures were edited."
         else:
             for change in chgList:
                 chgString = change["type"] + ": " + change["date"] + ", " + change["time"] + " " + change["status"] + "\n\n"
@@ -54,7 +54,7 @@ class ClosureNotifier:
 
         inserts = ""
         if len(insList) < 1:
-            inserts = "No closures were removed."
+            inserts = "No closures were added."
         else:
             for change in insList:
                 chgString = change["type"] + ": " + change["date"] + ", " + change["time"] + " " + change["status"] + "\n\n"
@@ -153,4 +153,5 @@ class ClosureNotifier:
                 if parsedDifferences:
                     self.notifyDiscord(self.discordWebhookUrl, parsedDifferences)
                     self.prevClosures = closureJson
-                    print(parsedDifferences)
+                    print(json.dumps(self.prevClosures))
+                    print(json.dumps(closureJson))

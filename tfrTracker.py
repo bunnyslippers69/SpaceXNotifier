@@ -27,7 +27,7 @@ class TfrNotifier:
 
         changes = ""
         if len(chgList) < 1:
-            changes = "No closures were removed."
+            changes = "No TFRs were edited."
         else:
             for change in chgList:
                 chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
@@ -35,7 +35,7 @@ class TfrNotifier:
 
         deletes = ""
         if len(delList) < 1:
-            deletes = "No closures were removed."
+            deletes = "No TFRs were removed."
         else:
             for change in delList:
                 chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
@@ -43,7 +43,7 @@ class TfrNotifier:
 
         inserts = ""
         if len(insList) < 1:
-            inserts = "No closures were removed."
+            inserts = "No TFRs were added."
         else:
             for change in insList:
                 chgString = change["notamNumber"] + "\nAltitude: " + self.getAltitude(change["traditionalMessage"]) + "\n" + change["startDate"] + " to " + change["endDate"] + "\n\n"
