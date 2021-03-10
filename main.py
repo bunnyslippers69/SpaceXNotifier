@@ -22,10 +22,11 @@ tfr = importlib.import_module("tfrTracker")
 sn = importlib.import_module("siteChanges")
 
 #Time to sleep between actions
-sleep = 10
+sleep = 5
 
 closureNotifier = rc.ClosureNotifier(discordWebhookUrl)
 tweetNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys)
+elonNotifier = tn.TweetNotifier(discordWebhookUrl, tweepyKeys, "elonmusk")
 tfrNotifier = tfr.TfrNotifier(discordWebhookUrl)
 siteNotifier = sn.SiteNotifier("https://www.spacex.com/vehicles/starship/", discordWebhookUrl)
 
@@ -44,6 +45,7 @@ while True:
         run_io_tasks_in_parallel([
             lambda: closureNotifier.run(),
             lambda: tweetNotifier.run(),
+            lambda: elonNotifier.run(),
             lambda: tfrNotifier.run(),
             lambda: siteNotifier.run()
         ])
