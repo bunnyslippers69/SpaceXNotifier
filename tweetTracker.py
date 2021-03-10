@@ -29,21 +29,21 @@ class TweetNotifier:
         print("--Tweet Tracker Start--")
         
         if self.profile != None:
-            for tweet in self.api.user_timeline(screen_name = self.profile, count = 1):
-                if not self.lastTweet:
-                    self.lastTweet = tweet
-                    break
-                elif self.lastTweet.id != tweet.id:
-                    self.lastTweet = tweet
-                    self.notifyDiscord(self.discordWebhookUrl, tweet)
-                    break
+            tweet = self.api.user_timeline(screen_name = self.profile, count = 1)[0]
+
+            if not self.lastTweet:
+                self.lastTweet = tweet
+            elif self.lastTweet.id != tweet.id:
+                self.lastTweet = tweet
+                self.notifyDiscord(self.discordWebhookUrl, tweet)
         else:
-            for tweet in self.api.list_timeline(list_id = "1360995960860590081", count = 1, include_rts=False):
-                if not self.lastTweet:
-                    self.lastTweet = tweet
-                elif self.lastTweet.id != tweet.id:
-                    self.lastTweet = tweet
-                    self.notifyDiscord(self.discordWebhookUrl, tweet)
+            tweet = self.api.list_timeline(list_id = "1360995960860590081", count = 1, include_rts=False)[0]
+
+            if not self.lastTweet:
+                self.lastTweet = tweet
+            elif self.lastTweet.id != tweet.id:
+                self.lastTweet = tweet
+                self.notifyDiscord(self.discordWebhookUrl, tweet)
 
         #time.sleep(30)
         print("--Tweet Tracker Done--")
